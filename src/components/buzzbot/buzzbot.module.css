@@ -172,6 +172,124 @@
   display: none;
 }
 
+.workspace {
+  min-width: 0;
+  min-height: 100dvh;
+  flex: 1;
+  background: var(--color-canvas);
+}
+
+.chatCanvas {
+  width: min(100% - 40px, var(--workspace-width));
+  min-height: 100dvh;
+  margin: 0 auto;
+}
+
+.emptyState {
+  min-height: 100dvh;
+  display: grid;
+  align-content: center;
+  gap: 28px;
+  padding-block: 72px;
+}
+
+.emptyState h1 {
+  margin: 0;
+  color: var(--color-gt-navy);
+  font-family: var(--font-roboto-condensed), sans-serif;
+  font-size: clamp(30px, 5vw, 44px);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  text-align: center;
+}
+
+.composer {
+  height: var(--composer-height);
+  min-height: var(--composer-height);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 16px;
+  border: 1px solid var(--color-gt-navy);
+  border-radius: 15px;
+  background: white;
+  box-shadow: 3px 3px 0 var(--color-gt-gold);
+}
+
+.composer textarea {
+  min-width: 0;
+  max-height: 160px;
+  flex: 1;
+  resize: none;
+  overflow-y: auto;
+  padding: 8px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  line-height: 18px;
+}
+
+.composer textarea::placeholder {
+  color: var(--color-muted);
+}
+
+.composer button {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-gt-navy);
+  color: white;
+  cursor: pointer;
+}
+
+.composer button:disabled {
+  background: var(--color-border);
+  color: var(--color-muted);
+  cursor: default;
+}
+
+.suggestions {
+  border-top: 1px solid var(--color-border);
+}
+
+.suggestions button {
+  width: 100%;
+  min-height: 48px;
+  display: block;
+  padding: 13px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.suggestions button:hover {
+  color: var(--color-gt-navy);
+}
+
+.thread {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-block: 72px 24px;
+}
+
+.thread > p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.thread .composer {
+  margin-top: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sidebar {
     transition: none;
