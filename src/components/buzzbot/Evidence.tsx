@@ -1,64 +1,79 @@
-import type { MockAnswer, SourceCitation } from "./mock-data";
+import type { StoredMessage } from "./chat-types";
 import styles from "./buzzbot.module.css";
 
-export function SourceList({
-  sources,
-  freshAsOf,
-}: {
-  sources: readonly SourceCitation[];
-  freshAsOf: string;
-}) {
-  return (
-    <section className={styles.sources} aria-labelledby="source-heading">
-      <h3 id="source-heading">Official sources</h3>
-      <ol>
-        {sources.map((source) => (
-          <li key={source.id}>
-            <a href={source.url} rel="noreferrer" target="_blank">
-              {source.title}
-            </a>
-            <span>{source.authority}</span>
-          </li>
-        ))}
-      </ol>
-      <p>Data as of {freshAsOf}</p>
-    </section>
-  );
+function safeHttpUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+  } catch {
+    return null;
+  }
 }
 
-export function ScheduleResult({ answer }: { answer: MockAnswer }) {
+function shortDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+export function ResponseEvidence({ message }: { message: StoredMessage }) {
+  const citations = message.citations ?? [];
+  const notes = message.notes ?? [];
+
   return (
-    <section className={styles.schedule} aria-labelledby="course-heading">
-      <header>
-        <p>{answer.course.term}</p>
-        <h2 id="course-heading">
-          {answer.course.code} · {answer.course.title}
-        </h2>
-      </header>
-      <div className={styles.tableFrame}>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">CRN</th>
-              <th scope="col">Section</th>
-              <th scope="col">Days</th>
-              <th scope="col">Time</th>
-              <th scope="col">Instructor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {answer.sections.map((section) => (
-              <tr key={section.crn}>
-                <td data-label="CRN">{section.crn}</td>
-                <td data-label="Section">{section.section}</td>
-                <td data-label="Days">{section.days}</td>
-                <td data-label="Time">{section.time}</td>
-                <td data-label="Instructor">{section.instructor}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <>
+      {citations.length > 0 && (
+        <section aria-label="Official sources" className={styles.sources}>
+          <h3>Official sources</h3>
+          <ol>
+            {citations.map((citation, index) => {
+              const href = safeHttpUrl(citation.url);
+              const title = citation.title || `Official source ${index + 1}`;
+              return (
+                <li key={`${citation.url}-${index}`}>
+                  {href ? (
+                    <a href={href} rel="noreferrer" target="_blank">
+                      {title}
+                    </a>
+                  ) : (
+                    <strong>{title}</strong>
+                  )}
+                  <blockquote>{citation.quote}</blockquote>
+                  {(citation.page || citation.fetched_at) && (
+                    <small>
+                      {citation.page ? `Page ${citation.page}` : ""}
+                      {citation.page && citation.fetched_at ? " · " : ""}
+                      {citation.fetched_at
+                        ? `Source updated ${shortDate(citation.fetched_at)}`
+                        : ""}
+                    </small>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
+      <div className={styles.responseMeta}>
+        {message.confidence !== undefined && (
+          <span>Confidence {Math.round(message.confidence * 100)}%</span>
+        )}
+        {message.freshness?.as_of && (
+          <span>Data as of {shortDate(message.freshness.as_of)}</span>
+        )}
       </div>
-    </section>
+      {notes.length > 0 && (
+        <ul aria-label="Answer notes" className={styles.answerNotes}>
+          {notes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 }

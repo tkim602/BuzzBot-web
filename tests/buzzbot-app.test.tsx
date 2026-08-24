@@ -1,32 +1,187 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BuzzBotApp } from "@/components/buzzbot/BuzzBotApp";
-import { MOCK_ANSWER, SUGGESTIONS } from "@/components/buzzbot/mock-data";
+import { CHAT_STORAGE_KEY } from "@/components/buzzbot/chat-storage";
+import type { StoredChatState } from "@/components/buzzbot/chat-types";
+import { SUGGESTIONS } from "@/components/buzzbot/mock-data";
+
+function apiResponse(threadId: string, answer: string) {
+  return {
+    thread_id: threadId,
+    answer,
+    citations: [],
+    confidence: 0.85,
+    freshness: { strategy: "langgraph_controlled", as_of: "2026-08-25T00:00:00Z" },
+    notes: [],
+  };
+}
+
+function jsonResponse(body: object) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function storedState(): StoredChatState {
+  return {
+    version: 1,
+    activeConversationId: "thread-cs",
+    conversations: [
+      {
+        id: "thread-cs",
+        title: "CS 6601 schedule",
+        createdAt: "2026-08-25T00:00:00Z",
+        updatedAt: "2026-08-25T00:00:01Z",
+        messages: [
+          {
+            id: "message-1",
+            role: "user",
+            content: "Is CS 6601 offered?",
+            createdAt: "2026-08-25T00:00:00Z",
+            status: "complete",
+          },
+          {
+            id: "message-2",
+            role: "assistant",
+            content: "Yes, it has published sections.",
+            createdAt: "2026-08-25T00:00:01Z",
+            status: "complete",
+          },
+        ],
+      },
+      {
+        id: "thread-omscs",
+        title: "OMSCS requirements",
+        createdAt: "2026-08-24T00:00:00Z",
+        updatedAt: "2026-08-24T00:00:00Z",
+        messages: [
+          {
+            id: "message-3",
+            role: "user",
+            content: "How many OMSCS courses?",
+            createdAt: "2026-08-24T00:00:00Z",
+            status: "complete",
+          },
+        ],
+      },
+    ],
+  };
+}
 
 describe("BuzzBotApp", () => {
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
-
-  it("moves from question to thinking to an evidence-rich mock answer", async () => {
-    render(<BuzzBotApp />);
-    fireEvent.click(
-      screen.getByRole("button", { name: `Ask: ${SUGGESTIONS[0]}` }),
+  beforeEach(() => {
+    localStorage.clear();
+    let nextId = 0;
+    vi.spyOn(globalThis.crypto, "randomUUID").mockImplementation(
+      () =>
+        `00000000-0000-4000-8000-${String(++nextId).padStart(12, "0")}` as `${string}-${string}-${string}-${string}-${string}`,
     );
+  });
 
-    expect(screen.getByText(SUGGESTIONS[0])).toBeVisible();
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("stores a first answer and sends prior completed turns on continuation", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce((_url: string, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        return Promise.resolve(jsonResponse(apiResponse(body.thread_id, "First answer")));
+      })
+      .mockImplementationOnce((_url: string, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        return Promise.resolve(jsonResponse(apiResponse(body.thread_id, "Second answer")));
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BuzzBotApp />);
+
+    fireEvent.click(screen.getByRole("button", { name: `Ask: ${SUGGESTIONS[0]}` }));
     expect(screen.getByRole("status")).toHaveTextContent("Thinking");
+    await screen.findByText("First answer");
 
-    await act(async () => vi.advanceTimersByTimeAsync(650));
+    const firstBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    expect(firstBody.history).toEqual([]);
+    expect(firstBody.query).toBe(SUGGESTIONS[0]);
 
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
-    expect(screen.getByText(MOCK_ANSWER.answer)).toBeVisible();
+    fireEvent.change(screen.getByRole("textbox", { name: "Message BuzzBot" }), {
+      target: { value: "Which section is online?" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await screen.findByText("Second answer");
+
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1][1]?.body));
+    expect(secondBody.thread_id).toBe(firstBody.thread_id);
+    expect(secondBody.history).toEqual([
+      { role: "user", content: SUGGESTIONS[0] },
+      { role: "assistant", content: "First answer" },
+    ]);
+    expect(JSON.parse(localStorage.getItem(CHAT_STORAGE_KEY) ?? "null")).toMatchObject({
+      version: 1,
+      activeConversationId: firstBody.thread_id,
+    });
+  });
+
+  it("restores saved conversations, selects history, and starts a new draft", () => {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(storedState()));
+    render(<BuzzBotApp />);
+
+    expect(screen.getByText("Yes, it has published sections.")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "OMSCS requirements" }));
+    expect(screen.getByText("How many OMSCS courses?")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "New chat" }));
     expect(
-      screen.getByRole("heading", {
-        name: /CS 6601.*Artificial Intelligence/,
-      }),
+      screen.getByRole("heading", { name: "What can I help you with at Tech?" }),
     ).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "Georgia Tech OSCAR" }),
-    ).toHaveAttribute("href", "https://oscar.gatech.edu/");
+    expect(screen.getByRole("button", { name: "CS 6601 schedule" })).toBeVisible();
+  });
+
+  it("retries a failed question without duplicating the user turn", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockImplementationOnce((_url: string, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        return Promise.resolve(jsonResponse(apiResponse(body.thread_id, "Recovered answer")));
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BuzzBotApp />);
+
+    fireEvent.click(screen.getByRole("button", { name: `Ask: ${SUGGESTIONS[1]}` }));
+    await screen.findByText("Unable to reach BuzzBot. Check that the API is running.");
+    fireEvent.click(screen.getByRole("button", { name: "Retry question" }));
+    await screen.findByText("Recovered answer");
+
+    expect(within(screen.getByRole("main")).getAllByText(SUGGESTIONS[1])).toHaveLength(1);
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body)).history).toEqual([]);
+  });
+
+  it("aborts an in-flight request when another conversation is selected", async () => {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(storedState()));
+    let requestSignal: AbortSignal | null = null;
+    let requestAborted = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init: RequestInit) => {
+        requestSignal = init.signal as AbortSignal;
+        requestSignal.addEventListener("abort", () => {
+          requestAborted = true;
+        });
+        return new Promise<Response>(() => undefined);
+      }),
+    );
+    render(<BuzzBotApp />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Message BuzzBot" }), {
+      target: { value: "Tell me more" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await waitFor(() => expect(requestSignal).not.toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "OMSCS requirements" }));
+
+    expect(requestAborted).toBe(true);
   });
 });
