@@ -88,6 +88,7 @@ Use Node `>=20.9.0` and these scripts:
   "name": "buzzbot-web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "engines": { "node": ">=20.9.0" },
   "scripts": {
     "dev": "next dev",
@@ -115,9 +116,9 @@ Use Node `>=20.9.0` and these scripts:
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
     "@vitejs/plugin-react": "6.1.0",
-    "eslint": "^9.0.0",
+    "eslint": "9.39.5",
     "eslint-config-next": "16.3.2",
-    "jsdom": "30.0.1",
+    "jsdom": "26.1.0",
     "typescript": "^5.9.0",
     "vite": "8.2.2",
     "vitest": "4.1.11"

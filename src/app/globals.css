@@ -1,0 +1,64 @@
+:root {
+  --sidebar-expanded: 260px;
+  --sidebar-collapsed: 56px;
+  --workspace-width: 768px;
+  --composer-height: 50px;
+  --color-gt-gold: oklch(67.2% 0.092 80.9);
+  --color-gt-dark-gold: oklch(56.6% 0.079 79.8);
+  --color-gt-navy: oklch(23.3% 0.061 252.8);
+  --color-gt-diploma: oklch(97.1% 0.023 98.6);
+  --color-canvas: oklch(98.5% 0.004 91.4);
+  --color-ink: oklch(27.6% 0.023 248.7);
+  --color-muted: oklch(45.7% 0.006 228.9);
+  --color-border: oklch(87.3% 0.014 88.7);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-roboto), sans-serif;
+}
+
+body,
+h1,
+h2,
+h3,
+.big-statement,
+.cjk-display {
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+button,
+textarea {
+  color: inherit;
+  font: inherit;
+}
+
+button:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--color-gt-dark-gold);
+  outline-offset: 2px;
+}
