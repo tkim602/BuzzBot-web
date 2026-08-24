@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Connect BuzzBot Web to the real `/v2/chat` API and replace mock chat history with resumable, searchable browser-local conversations while leaving authentication out of scope.
+**Goal:** Connect BuzzBot Web to the real `/chat` API and replace mock chat history with resumable, searchable browser-local conversations while leaving authentication out of scope.
 
 **Architecture:** `BuzzBotApp` remains the state owner and delegates HTTP serialization to `chat-api.ts` and versioned persistence to `chat-storage.ts`. The sidebar receives real conversations and callbacks; the workspace renders stored messages and real response evidence. FastAPI keeps its existing chat contract and gains only environment-configurable CORS origins.
 
@@ -52,7 +52,7 @@ BuzzBot/
 - [ ] **Step 1: Write failing API serialization and error tests**
 
 Create tests that stub `global.fetch`, call `sendChat`, and assert the exact
-`POST http://localhost:8000/v2/chat` body:
+`POST http://localhost:8000/chat` body:
 
 ```ts
 expect(JSON.parse(String(init?.body))).toEqual({
@@ -87,7 +87,7 @@ export async function sendChat(
   request: ChatApiRequest,
   signal?: AbortSignal,
 ): Promise<ChatApiResponse> {
-  const response = await fetch(`${apiOrigin()}/v2/chat`, {
+  const response = await fetch(`${apiOrigin()}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
@@ -347,7 +347,7 @@ Commit: `feat: connect resumable BuzzBot conversations`
 
 - [ ] **Step 1: Add a failing intercepted API browser test**
 
-Intercept `**/v2/chat`, assert the first and second payloads use one thread ID
+Intercept `**/chat`, assert the first and second payloads use one thread ID
 and the second contains prior turns, fulfill deterministic responses, reload,
 and assert the conversation remains selectable in history. Keep existing desktop
 and mobile layout tests.
@@ -356,7 +356,7 @@ and mobile layout tests.
 
 Run: `npm run test:e2e`
 
-Expected: FAIL because current runtime never calls `/v2/chat`.
+Expected: FAIL because current runtime never calls `/chat`.
 
 - [ ] **Step 3: Add environment and run documentation**
 

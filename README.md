@@ -15,7 +15,7 @@ npm run dev
 Open `http://localhost:3000`.
 
 `NEXT_PUBLIC_BUZZBOT_API_URL` is the public API origin, not a place for API
-keys. The browser sends chat requests directly to `POST /v2/chat`.
+keys. The browser sends chat requests directly to `POST /chat`.
 
 ## Conversation history
 

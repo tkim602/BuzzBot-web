@@ -6,7 +6,7 @@
 ## Goal
 
 Replace the frontend shell's mock conversation and mock history with the real
-BuzzBot `POST /v2/chat` API and browser-local conversation persistence. Keep the
+BuzzBot `POST /chat` API and browser-local conversation persistence. Keep the
 existing UI direction, do not implement authentication, and preserve stable
 thread identifiers so local conversations can be imported into an account after
 authentication is added later.
@@ -15,7 +15,7 @@ authentication is added later.
 
 This iteration delivers:
 
-- real non-streaming calls to the existing FastAPI `/v2/chat` endpoint;
+- real non-streaming calls to the existing FastAPI `/chat` endpoint;
 - continuation of a selected conversation using its `thread_id` and recent
   message history;
 - functional New chat, history selection, local history search, reload
@@ -43,7 +43,7 @@ Sidebar / ChatWorkspace
         │     └── localStorage: buzzbot.chat.v1
         │
         └── chat-api.ts
-              └── POST ${NEXT_PUBLIC_BUZZBOT_API_URL}/v2/chat
+              └── POST ${NEXT_PUBLIC_BUZZBOT_API_URL}/chat
                     query
                     thread_id
                     history (last 20 completed turns)
@@ -72,7 +72,7 @@ The frontend consumes `thread_id`, `answer`, `citations`, `confidence`,
 shown in the student-facing interface.
 
 The API URL is normalized by removing a trailing slash before appending
-`/v2/chat`. The API module accepts an `AbortSignal`, rejects malformed success
+`/chat`. The API module accepts an `AbortSignal`, rejects malformed success
 payloads, and maps HTTP/network failures to a short user-safe message. For a
 429 response, the backend's safe `detail.message` and optional retry interval
 may be shown. Raw stack traces and response bodies are never rendered.
@@ -199,7 +199,7 @@ Frontend tests cover:
 - new chat, real history selection, local search, reload restoration, request
   loading, success, failure, retry, and continued-chat history handoff;
 - citation URL safety and real response rendering;
-- Playwright API interception proving the UI sends the expected `/v2/chat`
+- Playwright API interception proving the UI sends the expected `/chat`
   payload and restores history after reload.
 
 Backend tests cover configured CORS origin parsing and middleware behavior.
@@ -207,7 +207,7 @@ No test calls OpenAI, LangSmith, or a live BuzzBot endpoint.
 
 ## Acceptance Criteria
 
-- A user can ask a question and see the real `/v2/chat` response.
+- A user can ask a question and see the real `/chat` response.
 - A second question in the same conversation sends the same `thread_id` and
   prior completed turns.
 - Reloading preserves and restores conversations in the same browser.

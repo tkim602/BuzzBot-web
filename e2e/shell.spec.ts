@@ -4,7 +4,7 @@ test("chat calls the API and resumes from local history after reload", async ({
   page,
 }) => {
   const requests: Array<{ query: string; thread_id: string; history: unknown[] }> = [];
-  await page.route("http://localhost:8000/v2/chat", async (route) => {
+  await page.route("http://localhost:8000/chat", async (route) => {
     const request = route.request().postDataJSON();
     requests.push(request);
     await route.fulfill({

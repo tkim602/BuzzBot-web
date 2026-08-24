@@ -24,7 +24,7 @@ describe("sendChat", () => {
     delete process.env.NEXT_PUBLIC_BUZZBOT_API_URL;
   });
 
-  it("posts the exact v2 chat contract and returns a validated response", async () => {
+  it("posts the exact chat contract and returns a validated response", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(validResponse), {
         status: 200,
@@ -42,7 +42,7 @@ describe("sendChat", () => {
     ).resolves.toEqual(validResponse);
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("http://localhost:8000/v2/chat");
+    expect(url).toBe("http://localhost:8000/chat");
     expect(init.method).toBe("POST");
     expect(init.headers).toEqual({ "Content-Type": "application/json" });
     expect(JSON.parse(String(init.body))).toEqual({
@@ -62,7 +62,7 @@ describe("sendChat", () => {
     await sendChat({ query: "Hello", thread_id: "thread-1", history: [] });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.example.edu/v2/chat",
+      "https://api.example.edu/chat",
       expect.any(Object),
     );
   });
