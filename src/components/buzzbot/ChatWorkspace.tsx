@@ -2,30 +2,30 @@
 
 import type { FormEvent, KeyboardEvent } from "react";
 import { ArrowUp } from "lucide-react";
-import { ScheduleResult, SourceList } from "./Evidence";
-import { MOCK_ANSWER } from "./mock-data";
+import { ResponseEvidence } from "./Evidence";
+import type { StoredMessage } from "./chat-types";
 import { SUGGESTIONS } from "./mock-data";
 import styles from "./buzzbot.module.css";
 
-export type ChatPhase = "empty" | "thinking" | "answer";
-
 export type ChatWorkspaceProps = {
-  phase: ChatPhase;
-  question: string;
+  messages: readonly StoredMessage[];
   input: string;
+  pending: boolean;
+  error: string | null;
   onInputChange(value: string): void;
   onSubmit(question: string): void;
+  onRetry(): void;
 };
 
 type ComposerProps = Pick<
   ChatWorkspaceProps,
-  "input" | "onInputChange" | "onSubmit"
+  "input" | "pending" | "onInputChange" | "onSubmit"
 >;
 
-function Composer({ input, onInputChange, onSubmit }: ComposerProps) {
+function Composer({ input, pending, onInputChange, onSubmit }: ComposerProps) {
   const submit = () => {
     const question = input.trim();
-    if (question) onSubmit(question);
+    if (question && !pending) onSubmit(question);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -41,43 +41,63 @@ function Composer({ input, onInputChange, onSubmit }: ComposerProps) {
   };
 
   return (
-    <form
-      aria-label="Message BuzzBot"
-      className={styles.composer}
-      onSubmit={handleSubmit}
-    >
+    <form aria-label="Message BuzzBot" className={styles.composer} onSubmit={handleSubmit}>
       <textarea
         aria-label="Message BuzzBot"
+        disabled={pending}
         onChange={(event) => onInputChange(event.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Ask about Georgia Tech"
         rows={1}
         value={input}
       />
-      <button aria-label="Send message" disabled={!input.trim()} type="submit">
+      <button
+        aria-label="Send message"
+        disabled={pending || !input.trim()}
+        type="submit"
+      >
         <ArrowUp aria-hidden="true" size={18} strokeWidth={2} />
       </button>
     </form>
   );
 }
 
+function Messages({ messages }: { messages: readonly StoredMessage[] }) {
+  return messages.map((message) =>
+    message.role === "user" ? (
+      <p className={styles.userMessage} data-failed={message.status === "failed"} key={message.id}>
+        {message.content}
+      </p>
+    ) : (
+      <article className={styles.answer} key={message.id}>
+        <p>{message.content}</p>
+        <ResponseEvidence message={message} />
+      </article>
+    ),
+  );
+}
+
 export function ChatWorkspace({
-  phase,
-  question,
+  messages,
   input,
+  pending,
+  error,
   onInputChange,
   onSubmit,
+  onRetry,
 }: ChatWorkspaceProps) {
+  const empty = messages.length === 0 && !pending && !error;
   return (
     <main className={styles.workspace}>
       <section className={styles.chatCanvas}>
-        {phase === "empty" ? (
+        {empty ? (
           <div className={styles.emptyState}>
             <h1>What can I help you with at Tech?</h1>
             <Composer
               input={input}
               onInputChange={onInputChange}
               onSubmit={onSubmit}
+              pending={pending}
             />
             <div aria-label="Likely questions" className={styles.suggestions}>
               {SUGGESTIONS.map((suggestion) => (
@@ -95,21 +115,20 @@ export function ChatWorkspace({
         ) : (
           <div className={styles.thread}>
             <div className={styles.messages}>
-              <p className={styles.userMessage}>{question}</p>
-              {phase === "thinking" ? (
+              <Messages messages={messages} />
+              {pending && (
                 <div aria-live="polite" className={styles.thinking} role="status">
                   <span aria-hidden="true" />
                   Thinking
                 </div>
-              ) : (
-                <article className={styles.answer}>
-                  <p>{MOCK_ANSWER.answer}</p>
-                  <ScheduleResult answer={MOCK_ANSWER} />
-                  <SourceList
-                    freshAsOf={MOCK_ANSWER.freshAsOf}
-                    sources={MOCK_ANSWER.sources}
-                  />
-                </article>
+              )}
+              {error && (
+                <div className={styles.chatError} role="alert">
+                  <p>{error}</p>
+                  <button aria-label="Retry question" onClick={onRetry} type="button">
+                    Retry
+                  </button>
+                </div>
               )}
             </div>
             <div className={styles.stickyComposer}>
@@ -117,6 +136,7 @@ export function ChatWorkspace({
                 input={input}
                 onInputChange={onInputChange}
                 onSubmit={onSubmit}
+                pending={pending}
               />
             </div>
           </div>

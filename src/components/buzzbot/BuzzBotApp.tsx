@@ -2,23 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Menu } from "lucide-react";
-import { ChatWorkspace, type ChatPhase } from "./ChatWorkspace";
+import { ChatWorkspace } from "./ChatWorkspace";
 import { Sidebar } from "./Sidebar";
 import styles from "./buzzbot.module.css";
 
 export function BuzzBotApp() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [phase, setPhase] = useState<ChatPhase>("empty");
-  const [question, setQuestion] = useState("");
   const [input, setInput] = useState("");
   const openSidebarButton = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (phase !== "thinking") return;
-    const timeout = window.setTimeout(() => setPhase("answer"), 650);
-    return () => window.clearTimeout(timeout);
-  }, [phase]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -34,15 +26,11 @@ export function BuzzBotApp() {
   const submitQuestion = (nextQuestion: string) => {
     const trimmed = nextQuestion.trim();
     if (!trimmed) return;
-    setQuestion(trimmed);
     setInput("");
-    setPhase("thinking");
   };
 
   const resetChat = () => {
-    setQuestion("");
     setInput("");
-    setPhase("empty");
     setMobileOpen(false);
   };
 
@@ -83,11 +71,13 @@ export function BuzzBotApp() {
         </button>
         <div id="chat-workspace" className={styles.workspaceSlot}>
           <ChatWorkspace
+            error={null}
             input={input}
+            messages={[]}
             onInputChange={setInput}
+            onRetry={() => undefined}
             onSubmit={submitQuestion}
-            phase={phase}
-            question={question}
+            pending={false}
           />
         </div>
       </div>
