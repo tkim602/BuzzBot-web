@@ -1,8 +1,3 @@
-export type ChatHistoryGroup = {
-  label: string;
-  conversations: readonly string[];
-};
-
 export type SourceCitation = {
   id: number;
   title: string;
@@ -26,14 +21,6 @@ export type MockAnswer = {
   sources: readonly SourceCitation[];
   freshAsOf: string;
 };
-
-export const HISTORY_GROUPS: readonly ChatHistoryGroup[] = [
-  { label: "Today", conversations: ["CS 6601 Fall schedule", "Registration dates"] },
-  {
-    label: "Previous 7 days",
-    conversations: ["OMSCS graduation requirements", "First-year recommendations"],
-  },
-];
 
 export const SUGGESTIONS = [
   "Which CS courses are offered in Fall 2026?",

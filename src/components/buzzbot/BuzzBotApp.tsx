@@ -53,10 +53,13 @@ export function BuzzBotApp() {
       </a>
       <div className={styles.appShell}>
         <Sidebar
+          activeConversationId={null}
           collapsed={collapsed}
+          historyGroups={[]}
           mobileOpen={mobileOpen}
           onClose={() => setMobileOpen(false)}
           onNewChat={resetChat}
+          onSelectConversation={() => undefined}
           onToggle={() => setCollapsed((value) => !value)}
         />
         {mobileOpen && (

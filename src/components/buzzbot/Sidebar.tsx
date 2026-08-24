@@ -6,26 +6,52 @@ import {
   SquarePen,
   X,
 } from "lucide-react";
-import { HISTORY_GROUPS } from "./mock-data";
+import { useMemo, useState } from "react";
+import type { ChatHistoryGroup } from "./chat-types";
 import styles from "./buzzbot.module.css";
 
 export type SidebarProps = {
   collapsed: boolean;
   mobileOpen: boolean;
+  historyGroups: readonly ChatHistoryGroup[];
+  activeConversationId: string | null;
   onToggle(): void;
   onClose(): void;
   onNewChat(): void;
+  onSelectConversation(id: string): void;
 };
 
 export function Sidebar({
   collapsed,
   mobileOpen,
+  historyGroups,
+  activeConversationId,
   onToggle,
   onClose,
   onNewChat,
+  onSelectConversation,
 }: SidebarProps) {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const toggleLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
   const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+  const filteredGroups = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return historyGroups;
+    return historyGroups
+      .map((group) => ({
+        ...group,
+        conversations: group.conversations.filter((conversation) =>
+          conversation.searchableText.toLowerCase().includes(query),
+        ),
+      }))
+      .filter((group) => group.conversations.length > 0);
+  }, [historyGroups, searchQuery]);
+
+  const toggleSearch = () => {
+    if (collapsed) onToggle();
+    setSearchOpen((value) => !value);
+  };
 
   return (
     <aside
@@ -72,8 +98,8 @@ export function Sidebar({
           type="button"
           className={styles.navAction}
           aria-label="Search chats"
-          title="Search chats, available after chat persistence"
-          disabled
+          aria-expanded={searchOpen}
+          onClick={toggleSearch}
         >
           <Search aria-hidden="true" size={19} strokeWidth={1.8} />
           {!collapsed && <span>Search chats</span>}
@@ -82,13 +108,41 @@ export function Sidebar({
 
       {!collapsed && (
         <nav className={styles.history} aria-label="Chat history">
-          {HISTORY_GROUPS.map((group) => (
+          {searchOpen && (
+            <input
+              aria-label="Search conversations"
+              className={styles.historySearch}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search conversations"
+              type="search"
+              value={searchQuery}
+            />
+          )}
+          {historyGroups.length === 0 && (
+            <p className={styles.historyEmpty}>Your conversations will appear here.</p>
+          )}
+          {historyGroups.length > 0 && filteredGroups.length === 0 && (
+            <p className={styles.historyEmpty}>No matching conversations.</p>
+          )}
+          {filteredGroups.map((group) => (
             <section key={group.label} className={styles.historyGroup}>
               <h2>{group.label}</h2>
               <ul>
-                {group.conversations.map((conversation, index) => (
-                  <li key={conversation} data-active={group.label === "Today" && index === 0}>
-                    {conversation}
+                {group.conversations.map((conversation) => (
+                  <li key={conversation.id}>
+                    <button
+                      aria-current={
+                        activeConversationId === conversation.id ? "page" : undefined
+                      }
+                      className={styles.historyItem}
+                      onClick={() => {
+                        onSelectConversation(conversation.id);
+                        onClose();
+                      }}
+                      type="button"
+                    >
+                      {conversation.title}
+                    </button>
                   </li>
                 ))}
               </ul>
