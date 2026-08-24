@@ -2,6 +2,8 @@
 
 import type { FormEvent, KeyboardEvent } from "react";
 import { ArrowUp } from "lucide-react";
+import { ScheduleResult, SourceList } from "./Evidence";
+import { MOCK_ANSWER } from "./mock-data";
 import { SUGGESTIONS } from "./mock-data";
 import styles from "./buzzbot.module.css";
 
@@ -92,12 +94,31 @@ export function ChatWorkspace({
           </div>
         ) : (
           <div className={styles.thread}>
-            <p>{question}</p>
-            <Composer
-              input={input}
-              onInputChange={onInputChange}
-              onSubmit={onSubmit}
-            />
+            <div className={styles.messages}>
+              <p className={styles.userMessage}>{question}</p>
+              {phase === "thinking" ? (
+                <div aria-live="polite" className={styles.thinking} role="status">
+                  <span aria-hidden="true" />
+                  Thinking
+                </div>
+              ) : (
+                <article className={styles.answer}>
+                  <p>{MOCK_ANSWER.answer}</p>
+                  <ScheduleResult answer={MOCK_ANSWER} />
+                  <SourceList
+                    freshAsOf={MOCK_ANSWER.freshAsOf}
+                    sources={MOCK_ANSWER.sources}
+                  />
+                </article>
+              )}
+            </div>
+            <div className={styles.stickyComposer}>
+              <Composer
+                input={input}
+                onInputChange={onInputChange}
+                onSubmit={onSubmit}
+              />
+            </div>
           </div>
         )}
       </section>
