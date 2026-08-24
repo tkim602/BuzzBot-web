@@ -50,7 +50,7 @@ function Composer({ input, onInputChange, onSubmit }: ComposerProps) {
         aria-label="Message BuzzBot"
         onChange={(event) => onInputChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Ask about courses, deadlines, or campus policies"
+        placeholder="Ask about Georgia Tech"
         rows={1}
         value={input}
       />
