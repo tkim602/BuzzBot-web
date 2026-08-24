@@ -251,7 +251,6 @@
   border: 1px solid var(--color-gt-navy);
   border-radius: 15px;
   background: white;
-  box-shadow: 3px 3px 0 var(--color-gt-gold);
 }
 
 .composer textarea {
