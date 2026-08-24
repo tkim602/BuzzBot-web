@@ -139,6 +139,34 @@ describe("BuzzBotApp", () => {
     expect(screen.getByRole("button", { name: "CS 6601 schedule" })).toBeVisible();
   });
 
+  it("returns home from the wordmark and persists pin and confirmed deletion", async () => {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(storedState()));
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<BuzzBotApp />);
+
+    fireEvent.click(screen.getByRole("button", { name: "BuzzBot home" }));
+    expect(
+      screen.getByRole("heading", { name: "What can I help you with at Tech?" }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "CS 6601 schedule" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Pin CS 6601 schedule" }));
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem(CHAT_STORAGE_KEY) ?? "null");
+      expect(saved.conversations.find((item: { id: string }) => item.id === "thread-cs").pinnedAt)
+        .toEqual(expect.any(String));
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete CS 6601 schedule" }));
+    expect(window.confirm).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem(CHAT_STORAGE_KEY) ?? "null");
+      expect(saved.conversations.map((item: { id: string }) => item.id)).toEqual([
+        "thread-omscs",
+      ]);
+    });
+  });
+
   it("retries a failed question without duplicating the user turn", async () => {
     const fetchMock = vi
       .fn()

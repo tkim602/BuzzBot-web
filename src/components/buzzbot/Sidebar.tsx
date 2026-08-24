@@ -1,9 +1,12 @@
 import {
   PanelLeftClose,
   PanelLeftOpen,
+  Pin,
+  PinOff,
   Search,
   Settings,
   SquarePen,
+  Trash2,
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -17,8 +20,10 @@ export type SidebarProps = {
   activeConversationId: string | null;
   onToggle(): void;
   onClose(): void;
+  onDeleteConversation(id: string): void;
   onNewChat(): void;
   onSelectConversation(id: string): void;
+  onTogglePin(id: string): void;
 };
 
 export function Sidebar({
@@ -28,8 +33,10 @@ export function Sidebar({
   activeConversationId,
   onToggle,
   onClose,
+  onDeleteConversation,
   onNewChat,
   onSelectConversation,
+  onTogglePin,
 }: SidebarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,12 +69,17 @@ export function Sidebar({
       data-mobile-open={mobileOpen}
     >
       <div className={styles.sidebarHeader}>
-        <div className={styles.wordmark} aria-label="BuzzBot">
+        <button
+          aria-label="BuzzBot home"
+          className={styles.wordmark}
+          onClick={onNewChat}
+          type="button"
+        >
           <span className={styles.wordmarkGlyph} aria-hidden="true">
             B
           </span>
           {!collapsed && <span>BuzzBot</span>}
-        </div>
+        </button>
         <button
           type="button"
           className={styles.iconButton}
@@ -129,7 +141,7 @@ export function Sidebar({
               <h2>{group.label}</h2>
               <ul>
                 {group.conversations.map((conversation) => (
-                  <li key={conversation.id}>
+                  <li className={styles.historyRow} key={conversation.id}>
                     <button
                       aria-current={
                         activeConversationId === conversation.id ? "page" : undefined
@@ -142,6 +154,26 @@ export function Sidebar({
                       type="button"
                     >
                       {conversation.title}
+                    </button>
+                    <button
+                      aria-label={`${conversation.pinned ? "Unpin" : "Pin"} ${conversation.title}`}
+                      className={styles.historyRowAction}
+                      onClick={() => onTogglePin(conversation.id)}
+                      type="button"
+                    >
+                      {conversation.pinned ? (
+                        <PinOff aria-hidden="true" size={15} />
+                      ) : (
+                        <Pin aria-hidden="true" size={15} />
+                      )}
+                    </button>
+                    <button
+                      aria-label={`Delete ${conversation.title}`}
+                      className={styles.historyRowAction}
+                      onClick={() => onDeleteConversation(conversation.id)}
+                      type="button"
+                    >
+                      <Trash2 aria-hidden="true" size={15} />
                     </button>
                   </li>
                 ))}

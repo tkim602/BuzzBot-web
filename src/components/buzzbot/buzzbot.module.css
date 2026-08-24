@@ -41,8 +41,14 @@
   min-width: 0;
   flex: 1;
   gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--color-gt-navy);
+  cursor: pointer;
+  font: inherit;
   font-weight: 700;
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -126,6 +132,18 @@
   margin: 0;
 }
 
+.historyRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  border-radius: 7px;
+}
+
+.historyRow:hover,
+.historyRow:focus-within {
+  background: color-mix(in oklch, var(--color-gt-navy) 6%, transparent);
+}
+
 .historyItem {
   width: 100%;
   overflow: hidden;
@@ -142,12 +160,37 @@
 }
 
 .historyItem:hover {
-  background: color-mix(in oklch, var(--color-gt-navy) 6%, transparent);
+  background: transparent;
 }
 
 .historyItem[aria-current="page"] {
   background: color-mix(in oklch, var(--color-gt-dark-gold) 10%, transparent);
   font-weight: 600;
+}
+
+.historyRowAction {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.historyRow:hover .historyRowAction,
+.historyRow:focus-within .historyRowAction {
+  opacity: 1;
+}
+
+.historyRowAction:hover,
+.historyRowAction:focus-visible {
+  background: color-mix(in oklch, var(--color-gt-navy) 9%, transparent);
+  color: var(--color-gt-navy);
 }
 
 .historySearch {
