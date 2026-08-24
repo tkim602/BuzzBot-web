@@ -14,7 +14,7 @@ export const EMPTY_CHAT_STATE: StoredChatState = {
 };
 
 const MAX_CONVERSATIONS = 50;
-const MAX_MESSAGES = 40;
+const MAX_MESSAGES = 100;
 const MAX_API_HISTORY = 20;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -43,6 +43,7 @@ function isConversation(value: unknown): value is StoredConversation {
     typeof value.title === "string" &&
     typeof value.createdAt === "string" &&
     typeof value.updatedAt === "string" &&
+    (value.pinnedAt === undefined || typeof value.pinnedAt === "string") &&
     Array.isArray(value.messages) &&
     value.messages.every(isMessage)
   );
@@ -108,6 +109,7 @@ export function groupConversations(
   now = new Date(),
 ): ChatHistoryGroup[] {
   const groups = new Map<ChatHistoryGroup["label"], ChatHistoryGroup["conversations"]>([
+    ["Pinned", []],
     ["Today", []],
     ["Previous 7 days", []],
     ["Older", []],
@@ -115,22 +117,34 @@ export function groupConversations(
   const today = startOfDay(now);
 
   [...conversations]
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    .sort((left, right) => {
+      if (left.pinnedAt && right.pinnedAt) return right.pinnedAt.localeCompare(left.pinnedAt);
+      if (left.pinnedAt) return -1;
+      if (right.pinnedAt) return 1;
+      return right.updatedAt.localeCompare(left.updatedAt);
+    })
     .forEach((conversation) => {
       const ageInDays = Math.floor(
         (today - startOfDay(new Date(conversation.updatedAt))) / 86_400_000,
       );
-      const label = ageInDays <= 0 ? "Today" : ageInDays <= 7 ? "Previous 7 days" : "Older";
+      const label = conversation.pinnedAt
+        ? "Pinned"
+        : ageInDays <= 0
+          ? "Today"
+          : ageInDays <= 7
+            ? "Previous 7 days"
+            : "Older";
       groups.get(label)?.push({
         id: conversation.id,
         title: conversation.title,
+        pinned: Boolean(conversation.pinnedAt),
         searchableText: `${conversation.title} ${conversation.messages
           .map((message) => message.content)
           .join(" ")}`,
       });
     });
 
-  return (["Today", "Previous 7 days", "Older"] as const)
+  return (["Pinned", "Today", "Previous 7 days", "Older"] as const)
     .map((label) => ({ label, conversations: groups.get(label) ?? [] }))
     .filter((group) => group.conversations.length > 0);
 }
