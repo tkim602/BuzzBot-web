@@ -1,5 +1,50 @@
 import { expect, test } from "@playwright/test";
 
+test("chat calls the API and resumes from local history after reload", async ({
+  page,
+}) => {
+  const requests: Array<{ query: string; thread_id: string; history: unknown[] }> = [];
+  await page.route("http://localhost:8000/v2/chat", async (route) => {
+    const request = route.request().postDataJSON();
+    requests.push(request);
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        thread_id: request.thread_id,
+        answer: requests.length === 1 ? "Fall classes begin August 17." : "It is a Monday.",
+        citations: [],
+        confidence: 0.91,
+        freshness: { strategy: "langgraph_controlled", as_of: "2026-08-25T00:00:00Z" },
+        notes: [],
+      }),
+    });
+  });
+  await page.goto("/");
+
+  const composer = page.getByRole("textbox", { name: "Message BuzzBot" });
+  await composer.fill("When do Fall classes begin?");
+  await composer.press("Enter");
+  await expect(page.getByText("Fall classes begin August 17.")).toBeVisible();
+  await composer.fill("What day is that?");
+  await composer.press("Enter");
+  await expect(page.getByText("It is a Monday.")).toBeVisible();
+
+  expect(requests[1]).toMatchObject({
+    thread_id: requests[0].thread_id,
+    history: [
+      { role: "user", content: "When do Fall classes begin?" },
+      { role: "assistant", content: "Fall classes begin August 17." },
+    ],
+  });
+
+  await page.reload();
+  await expect(page.getByText("It is a Monday.")).toBeVisible();
+  await page.getByRole("button", { name: "New chat" }).click();
+  await expect(page.getByRole("heading", { name: "What can I help you with at Tech?" })).toBeVisible();
+  await page.getByRole("button", { name: "When do Fall classes begin?" }).click();
+  await expect(page.getByText("It is a Monday.")).toBeVisible();
+});
+
 test("desktop sidebar collapses and the untouched composer stays compact", async ({
   page,
 }) => {
