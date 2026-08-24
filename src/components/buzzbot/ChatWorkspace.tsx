@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { ArrowUp } from "lucide-react";
 import { ResponseEvidence } from "./Evidence";
@@ -65,11 +66,20 @@ function Composer({ input, pending, onInputChange, onSubmit }: ComposerProps) {
 function Messages({ messages }: { messages: readonly StoredMessage[] }) {
   return messages.map((message) =>
     message.role === "user" ? (
-      <p className={styles.userMessage} data-failed={message.status === "failed"} key={message.id}>
+      <p
+        className={`${styles.userMessage} ${styles.messageTurn}`}
+        data-failed={message.status === "failed"}
+        data-testid="message-turn"
+        key={message.id}
+      >
         {message.content}
       </p>
     ) : (
-      <article className={styles.answer} key={message.id}>
+      <article
+        className={`${styles.answer} ${styles.messageTurn}`}
+        data-testid="message-turn"
+        key={message.id}
+      >
         <p>{message.content}</p>
         <ResponseEvidence message={message} />
       </article>
@@ -87,6 +97,15 @@ export function ChatWorkspace({
   onRetry,
 }: ChatWorkspaceProps) {
   const empty = messages.length === 0 && !pending && !error;
+  const messageScroll = useRef<HTMLDivElement>(null);
+  const followLatest = useRef(true);
+
+  useEffect(() => {
+    const element = messageScroll.current;
+    if (element && followLatest.current && typeof element.scrollTo === "function") {
+      element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+    }
+  }, [messages.length, pending, error]);
   return (
     <main className={styles.workspace}>
       <section className={styles.chatCanvas}>
@@ -114,7 +133,16 @@ export function ChatWorkspace({
           </div>
         ) : (
           <div className={styles.thread}>
-            <div className={styles.messages}>
+            <div
+              className={styles.messages}
+              data-testid="message-scroll"
+              onScroll={(event) => {
+                const element = event.currentTarget;
+                followLatest.current =
+                  element.scrollHeight - element.scrollTop - element.clientHeight <= 120;
+              }}
+              ref={messageScroll}
+            >
               <Messages messages={messages} />
               {pending && (
                 <div aria-live="polite" className={styles.thinking} role="status">

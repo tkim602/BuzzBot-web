@@ -48,6 +48,7 @@ export type StoredConversation = {
   title: string;
   createdAt: string;
   updatedAt: string;
+  pinnedAt?: string;
   messages: StoredMessage[];
 };
 
@@ -61,9 +62,10 @@ export type ChatHistoryItem = {
   id: string;
   title: string;
   searchableText: string;
+  pinned: boolean;
 };
 
 export type ChatHistoryGroup = {
-  label: "Today" | "Previous 7 days" | "Older";
+  label: "Pinned" | "Today" | "Previous 7 days" | "Older";
   conversations: ChatHistoryItem[];
 };

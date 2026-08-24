@@ -263,6 +263,31 @@ export function BuzzBotApp() {
     setMobileOpen(false);
   };
 
+  const togglePin = (id: string) => {
+    const now = new Date().toISOString();
+    setChatState((state) => ({
+      ...state,
+      conversations: state.conversations.map((conversation) =>
+        conversation.id === id
+          ? { ...conversation, pinnedAt: conversation.pinnedAt ? undefined : now }
+          : conversation,
+      ),
+    }));
+  };
+
+  const deleteConversation = (id: string) => {
+    const conversation = chatState.conversations.find((item) => item.id === id);
+    if (!conversation || !window.confirm(`Delete "${conversation.title}"?`)) return;
+    if (chatState.activeConversationId === id) abortRequest();
+    setChatState((state) => ({
+      ...state,
+      activeConversationId: state.activeConversationId === id ? null : state.activeConversationId,
+      conversations: state.conversations.filter((item) => item.id !== id),
+    }));
+    setError(null);
+    setMobileOpen(false);
+  };
+
   return (
     <>
       <a className={styles.skipLink} href="#chat-workspace">
@@ -275,9 +300,11 @@ export function BuzzBotApp() {
           historyGroups={historyGroups}
           mobileOpen={mobileOpen}
           onClose={() => setMobileOpen(false)}
+          onDeleteConversation={deleteConversation}
           onNewChat={resetChat}
           onSelectConversation={selectConversation}
           onToggle={() => setCollapsed((value) => !value)}
+          onTogglePin={togglePin}
         />
         {mobileOpen && (
           <button

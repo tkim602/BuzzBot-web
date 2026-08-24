@@ -79,7 +79,7 @@ describe("chat storage", () => {
     expect(history.some((turn) => turn.content === "Message 21")).toBe(false);
   });
 
-  it("bounds local state to 50 conversations and 40 messages each", () => {
+  it("bounds local state to 50 conversations and 100 messages each", () => {
     const state: StoredChatState = {
       version: 1,
       activeConversationId: "thread-54",
@@ -87,7 +87,7 @@ describe("chat storage", () => {
         conversation(
           `thread-${index}`,
           `2026-08-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
-          Array.from({ length: 45 }, (_value, messageIndex) => message(messageIndex)),
+          Array.from({ length: 105 }, (_value, messageIndex) => message(messageIndex)),
         ),
       ),
     };
@@ -96,8 +96,37 @@ describe("chat storage", () => {
 
     expect(normalized.conversations).toHaveLength(50);
     expect(normalized.conversations[0].id).toBe("thread-54");
-    expect(normalized.conversations[0].messages).toHaveLength(40);
+    expect(normalized.conversations[0].messages).toHaveLength(100);
     expect(normalized.conversations[0].messages[0].id).toBe("message-5");
+  });
+
+  it("loads legacy conversations and groups pinned chats first by pin time", () => {
+    const legacy = conversation("legacy", "2026-08-25T01:00:00.000Z");
+    const storage = memoryStorage(
+      JSON.stringify({ version: 1, activeConversationId: "legacy", conversations: [legacy] }),
+    );
+
+    expect(loadChatState(storage).conversations[0].pinnedAt).toBeUndefined();
+
+    const olderPin = {
+      ...conversation("older-pin", "2026-08-21T12:00:00.000Z"),
+      pinnedAt: "2026-08-24T12:00:00.000Z",
+    };
+    const newerPin = {
+      ...conversation("newer-pin", "2026-08-20T12:00:00.000Z"),
+      pinnedAt: "2026-08-25T12:00:00.000Z",
+    };
+    const groups = groupConversations(
+      [legacy, olderPin, newerPin],
+      new Date("2026-08-25T12:00:00.000Z"),
+    );
+
+    expect(groups[0].label).toBe("Pinned");
+    expect(groups[0].conversations.map((item) => item.id)).toEqual([
+      "newer-pin",
+      "older-pin",
+    ]);
+    expect(groups[0].conversations.every((item) => item.pinned)).toBe(true);
   });
 
   it("sorts and groups conversations by recency", () => {
