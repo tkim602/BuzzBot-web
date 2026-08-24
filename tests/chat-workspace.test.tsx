@@ -81,6 +81,8 @@ describe("ChatWorkspace", () => {
     expect(screen.getByText("Confidence 88%")).toBeVisible();
     expect(screen.getByText(/Data as of Aug 25, 2026/)).toBeVisible();
     expect(screen.getByText("Verify the latest listing before registration.")).toBeVisible();
+    expect(screen.getByTestId("message-scroll")).toBeInTheDocument();
+    expect(screen.getAllByTestId("message-turn")).toHaveLength(2);
   });
 
   it("disables composition while pending and exposes a retryable error", () => {

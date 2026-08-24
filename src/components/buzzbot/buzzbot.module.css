@@ -254,12 +254,14 @@
 }
 
 .appShell {
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
+  overflow: hidden;
 }
 
 .workspaceSlot {
   min-width: 0;
+  min-height: 0;
   flex: 1;
 }
 
@@ -288,14 +290,16 @@
 
 .workspace {
   min-width: 0;
-  min-height: 100dvh;
+  min-height: 0;
+  height: 100%;
   flex: 1;
   background: var(--color-canvas);
 }
 
 .chatCanvas {
   width: min(100% - 40px, var(--workspace-width));
-  min-height: 100dvh;
+  min-height: 0;
+  height: 100%;
   margin: 0 auto;
 }
 
@@ -391,16 +395,26 @@
 }
 
 .thread {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   padding-top: 52px;
 }
 
 .messages {
+  min-height: 0;
   display: grid;
+  align-content: start;
   gap: 28px;
-  padding: 36px 0 120px;
+  overflow-y: auto;
+  padding: 36px 0;
+  scrollbar-gutter: stable;
+}
+
+.messageTurn {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 160px;
 }
 
 .userMessage {
@@ -530,9 +544,6 @@
 }
 
 .stickyComposer {
-  position: sticky;
-  bottom: 0;
-  margin-top: auto;
   padding-block: 14px 20px;
   background: var(--color-canvas);
 }
@@ -623,7 +634,7 @@
   }
 
   .thread {
-    min-height: 100svh;
+    min-height: 0;
     padding-inline: 16px;
   }
 
