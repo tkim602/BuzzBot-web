@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Roboto, Roboto_Condensed } from "next/font/google";
 import type { ReactNode } from "react";
+import { AuthProvider } from "@/components/buzzbot/auth";
 import "./globals.css";
 
 const roboto = Roboto({
@@ -23,7 +24,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${roboto.variable} ${robotoCondensed.variable}`}>{children}</body>
+      <body className={`${roboto.variable} ${robotoCondensed.variable}`}>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

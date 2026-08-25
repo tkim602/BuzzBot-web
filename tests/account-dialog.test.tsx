@@ -72,6 +72,36 @@ describe("AccountDialog", () => {
 
     expect(screen.getByText(/has not been configured/i)).toBeVisible();
   });
+
+  it("sends a neutral password reset confirmation", async () => {
+    const auth = authState();
+    render(<AccountDialog auth={auth} onClose={() => undefined} open />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "student@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send reset email" }));
+
+    await waitFor(() => expect(auth.sendReset).toHaveBeenCalledWith("student@example.com"));
+    expect(await screen.findByText(/password-reset link/i)).toBeVisible();
+  });
+
+  it("signs out and closes the account dialog", async () => {
+    const onClose = vi.fn();
+    const auth = authState({
+      user: {
+        email: "student@example.com",
+        emailVerified: true,
+      } as AuthState["user"],
+    });
+    render(<AccountDialog auth={auth} onClose={onClose} open />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledOnce());
+    expect(onClose).toHaveBeenCalledOnce();
+  });
 });
 
 describe("PersonalizationDialog", () => {

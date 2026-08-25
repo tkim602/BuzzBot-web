@@ -1,9 +1,26 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BuzzBotApp } from "@/components/buzzbot/BuzzBotApp";
-import { CHAT_STORAGE_KEY } from "@/components/buzzbot/chat-storage";
+import { CHAT_STORAGE_KEY, chatStorageKey } from "@/components/buzzbot/chat-storage";
 import type { StoredChatState } from "@/components/buzzbot/chat-types";
 import { SUGGESTIONS } from "@/components/buzzbot/mock-data";
+
+const mockedAuth = vi.hoisted(() => ({
+  current: {
+    configured: false,
+    loading: false,
+    user: null as null | { uid: string; email: string; emailVerified: boolean },
+    personalizationEligible: false,
+    signUp: vi.fn(),
+    signIn: vi.fn(),
+    sendReset: vi.fn(),
+    signOut: vi.fn(),
+  },
+}));
+
+vi.mock("@/components/buzzbot/auth", () => ({
+  useAuth: () => mockedAuth.current,
+}));
 
 function apiResponse(threadId: string, answer: string) {
   return {
@@ -72,11 +89,65 @@ function storedState(): StoredChatState {
 describe("BuzzBotApp", () => {
   beforeEach(() => {
     localStorage.clear();
+    mockedAuth.current.configured = false;
+    mockedAuth.current.loading = false;
+    mockedAuth.current.user = null;
+    mockedAuth.current.personalizationEligible = false;
     let nextId = 0;
     vi.spyOn(globalThis.crypto, "randomUUID").mockImplementation(
       () =>
         `00000000-0000-4000-8000-${String(++nextId).padStart(12, "0")}` as `${string}-${string}-${string}-${string}-${string}`,
     );
+  });
+
+  it("waits for auth and moves anonymous history into the verified account namespace", async () => {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(storedState()));
+    mockedAuth.current.configured = true;
+    mockedAuth.current.loading = true;
+    const view = render(<BuzzBotApp />);
+
+    expect(screen.queryByText("Yes, it has published sections.")).not.toBeInTheDocument();
+    expect(localStorage.getItem(chatStorageKey("uid-1"))).toBeNull();
+
+    mockedAuth.current.loading = false;
+    mockedAuth.current.user = {
+      uid: "uid-1",
+      email: "student@gatech.edu",
+      emailVerified: true,
+    };
+    mockedAuth.current.personalizationEligible = true;
+    view.rerender(<BuzzBotApp />);
+
+    expect(await screen.findByText("Yes, it has published sections.")).toBeVisible();
+    expect(localStorage.getItem(CHAT_STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(localStorage.getItem(chatStorageKey("uid-1")) ?? "null")).toMatchObject({
+      activeConversationId: "thread-cs",
+    });
+    expect(screen.getByText("student@gatech.edu")).toBeVisible();
+  });
+
+  it("switches account namespaces without exposing another user's history", async () => {
+    localStorage.setItem(chatStorageKey("uid-1"), JSON.stringify(storedState()));
+    mockedAuth.current.configured = true;
+    mockedAuth.current.user = {
+      uid: "uid-1",
+      email: "one@example.com",
+      emailVerified: true,
+    };
+    const view = render(<BuzzBotApp />);
+    expect(await screen.findByText("Yes, it has published sections.")).toBeVisible();
+
+    mockedAuth.current.user = {
+      uid: "uid-2",
+      email: "two@example.com",
+      emailVerified: true,
+    };
+    view.rerender(<BuzzBotApp />);
+
+    expect(
+      await screen.findByRole("heading", { name: "What can I help you with at Tech?" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Yes, it has published sections.")).not.toBeInTheDocument();
   });
 
   afterEach(() => {

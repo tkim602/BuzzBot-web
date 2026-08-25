@@ -65,6 +65,19 @@ export function AccountDialog({
     }
   };
 
+  const signOut = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await auth.signOut();
+      onClose();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Sign out failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div
       className={styles.dialogBackdrop}
@@ -80,7 +93,8 @@ export function AccountDialog({
             <p className={styles.dialogEyebrow}>Account</p>
             <h2 id="account-dialog-title">{auth.user.email}</h2>
             <p>Your conversations are stored separately for this account on this browser.</p>
-            <button className={styles.primaryButton} disabled={busy} onClick={() => void auth.signOut()} type="button">
+            {error && <p role="alert">{error}</p>}
+            <button className={styles.primaryButton} disabled={busy} onClick={() => void signOut()} type="button">
               Sign out
             </button>
           </>

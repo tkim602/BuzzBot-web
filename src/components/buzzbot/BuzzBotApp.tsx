@@ -2,13 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Menu } from "lucide-react";
+import { AccountDialog } from "./AccountDialog";
 import { ChatWorkspace } from "./ChatWorkspace";
+import { PersonalizationDialog } from "./PersonalizationDialog";
 import { Sidebar } from "./Sidebar";
+import { useAuth } from "./auth";
 import { sendChat } from "./chat-api";
 import {
   EMPTY_CHAT_STATE,
   groupConversations,
   loadChatState,
+  migrateAnonymousChatState,
   saveChatState,
   toApiHistory,
 } from "./chat-storage";
@@ -45,6 +49,7 @@ function replaceConversation(
 }
 
 export function BuzzBotApp() {
+  const auth = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [chatState, setChatState] = useState<StoredChatState>(EMPTY_CHAT_STATE);
@@ -52,6 +57,9 @@ export function BuzzBotApp() {
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [personalizationOpen, setPersonalizationOpen] = useState(false);
+  const [storageUserId, setStorageUserId] = useState<string | null>();
   const openSidebarButton = useRef<HTMLButtonElement>(null);
   const activeRequest = useRef<ActiveRequest | null>(null);
 
@@ -70,20 +78,35 @@ export function BuzzBotApp() {
     error ?? (failedQuestion ? "This question was not completed." : null);
 
   useEffect(() => {
-    // Browser-only persistence must hydrate after the server render.
+    if (auth.loading) return;
+    const request = activeRequest.current;
+    if (request) {
+      activeRequest.current = null;
+      request.controller.abort();
+      setPending(false);
+    }
+    const userId = auth.user?.uid ?? null;
+    try {
+      if (userId) migrateAnonymousChatState(window.localStorage, userId);
+    } catch {
+      // Account switching must remain usable when storage is unavailable.
+    }
+    // Browser-only persistence must hydrate after auth chooses its namespace.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setChatState(loadChatState(window.localStorage));
+    setChatState(loadChatState(window.localStorage, userId));
+    setStorageUserId(userId);
     setHydrated(true);
-  }, []);
+    setError(null);
+  }, [auth.loading, auth.user?.uid]);
 
   useEffect(() => {
     if (!hydrated) return;
     try {
-      saveChatState(window.localStorage, chatState);
+      saveChatState(window.localStorage, chatState, storageUserId);
     } catch {
       // A full or unavailable localStorage must not break chat.
     }
-  }, [chatState, hydrated]);
+  }, [chatState, hydrated, storageUserId]);
 
   useEffect(
     () => () => {
@@ -295,6 +318,7 @@ export function BuzzBotApp() {
       </a>
       <div className={styles.appShell}>
         <Sidebar
+          accountEmail={auth.user?.email ?? null}
           activeConversationId={chatState.activeConversationId}
           collapsed={collapsed}
           historyGroups={historyGroups}
@@ -302,9 +326,14 @@ export function BuzzBotApp() {
           onClose={() => setMobileOpen(false)}
           onDeleteConversation={deleteConversation}
           onNewChat={resetChat}
+          onOpenAccount={() => setAccountOpen(true)}
+          onOpenPersonalization={() =>
+            auth.user ? setPersonalizationOpen(true) : setAccountOpen(true)
+          }
           onSelectConversation={selectConversation}
           onToggle={() => setCollapsed((value) => !value)}
           onTogglePin={togglePin}
+          personalizationEligible={auth.personalizationEligible}
         />
         {mobileOpen && (
           <button
@@ -337,6 +366,13 @@ export function BuzzBotApp() {
           />
         </div>
       </div>
+      <AccountDialog auth={auth} onClose={() => setAccountOpen(false)} open={accountOpen} />
+      <PersonalizationDialog
+        accountEmail={auth.user?.email ?? null}
+        eligible={auth.personalizationEligible}
+        onClose={() => setPersonalizationOpen(false)}
+        open={personalizationOpen}
+      />
     </>
   );
 }
