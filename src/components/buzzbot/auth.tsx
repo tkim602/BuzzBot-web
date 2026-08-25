@@ -36,6 +36,7 @@ export type AuthState = {
   loading: boolean;
   user: User | null;
   personalizationEligible: boolean;
+  getIdToken(forceRefresh?: boolean): Promise<string | null>;
   signUp(email: string, password: string): Promise<void>;
   signIn(email: string, password: string): Promise<void>;
   sendReset(email: string): Promise<void>;
@@ -108,6 +109,7 @@ const UNCONFIGURED_AUTH: AuthState = {
   loading: false,
   user: null,
   personalizationEligible: false,
+  getIdToken: async () => null,
   signUp: unavailable,
   signIn: unavailable,
   sendReset: unavailable,
@@ -135,6 +137,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       user,
       personalizationEligible: isPersonalizationEligible(user),
+      async getIdToken(forceRefresh = false) {
+        return user ? user.getIdToken(forceRefresh) : null;
+      },
       async signUp(email, password) {
         const auth = configuredAuth();
         try {

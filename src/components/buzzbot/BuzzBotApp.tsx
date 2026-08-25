@@ -165,6 +165,7 @@ export function BuzzBotApp() {
       const response = await sendChat(
         { query: question, thread_id: conversationId, history },
         controller.signal,
+        auth.getIdToken,
       );
       const now = new Date().toISOString();
       const assistantMessage: StoredMessage = {

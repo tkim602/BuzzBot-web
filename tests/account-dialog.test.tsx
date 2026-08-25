@@ -10,6 +10,7 @@ function authState(overrides: Partial<AuthState> = {}): AuthState {
     loading: false,
     user: null,
     personalizationEligible: false,
+    getIdToken: vi.fn().mockResolvedValue(null),
     signUp: vi.fn().mockResolvedValue(undefined),
     signIn: vi.fn().mockResolvedValue(undefined),
     sendReset: vi.fn().mockResolvedValue(undefined),

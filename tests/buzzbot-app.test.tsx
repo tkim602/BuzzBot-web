@@ -11,6 +11,7 @@ const mockedAuth = vi.hoisted(() => ({
     loading: false,
     user: null as null | { uid: string; email: string; emailVerified: boolean },
     personalizationEligible: false,
+    getIdToken: vi.fn().mockResolvedValue(null),
     signUp: vi.fn(),
     signIn: vi.fn(),
     sendReset: vi.fn(),
@@ -93,6 +94,7 @@ describe("BuzzBotApp", () => {
     mockedAuth.current.loading = false;
     mockedAuth.current.user = null;
     mockedAuth.current.personalizationEligible = false;
+    mockedAuth.current.getIdToken.mockReset().mockResolvedValue(null);
     let nextId = 0;
     vi.spyOn(globalThis.crypto, "randomUUID").mockImplementation(
       () =>
@@ -193,6 +195,34 @@ describe("BuzzBotApp", () => {
       version: 1,
       activeConversationId: firstBody.thread_id,
     });
+  });
+
+  it("uses but never persists the Firebase token", async () => {
+    mockedAuth.current.configured = true;
+    mockedAuth.current.user = {
+      uid: "uid-1",
+      email: "student@gatech.edu",
+      emailVerified: true,
+    };
+    mockedAuth.current.getIdToken.mockResolvedValue("secret-firebase-token");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        expect(init.headers).toMatchObject({
+          Authorization: "Bearer secret-firebase-token",
+        });
+        return Promise.resolve(jsonResponse(apiResponse(body.thread_id, "Authenticated answer")));
+      }),
+    );
+    render(<BuzzBotApp />);
+
+    fireEvent.click(screen.getByRole("button", { name: `Ask: ${SUGGESTIONS[0]}` }));
+    await screen.findByText("Authenticated answer");
+
+    expect(localStorage.getItem(chatStorageKey("uid-1"))).not.toContain(
+      "secret-firebase-token",
+    );
   });
 
   it("restores saved conversations, selects history, and starts a new draft", () => {
