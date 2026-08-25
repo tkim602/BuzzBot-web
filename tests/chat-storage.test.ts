@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   EMPTY_CHAT_STATE,
+  chatStorageKey,
   groupConversations,
   loadChatState,
+  migrateAnonymousChatState,
   normalizeChatState,
   saveChatState,
   toApiHistory,
@@ -20,6 +22,16 @@ function memoryStorage(initial: string | null = null) {
     setItem: (_key: string, next: string) => {
       value = next;
     },
+  };
+}
+
+function keyedMemoryStorage(initial: Record<string, string> = {}) {
+  const values = new Map(Object.entries(initial));
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+    removeItem: (key: string) => values.delete(key),
+    values,
   };
 }
 
@@ -44,6 +56,52 @@ function conversation(id: string, updatedAt: string, messages = [message(0)]): S
 }
 
 describe("chat storage", () => {
+  it("uses separate anonymous and account storage keys", () => {
+    expect(chatStorageKey()).toBe("buzzbot.chat.v1");
+    expect(chatStorageKey("uid-1")).toBe("buzzbot.chat.v1.user.uid-1");
+  });
+
+  it("moves anonymous history into an empty account exactly once", () => {
+    const state = storedMigrationState();
+    const storage = keyedMemoryStorage({
+      [chatStorageKey()]: JSON.stringify(state),
+    });
+
+    migrateAnonymousChatState(storage, "uid-1");
+
+    expect(loadChatState(storage, "uid-1")).toEqual(state);
+    expect(storage.getItem(chatStorageKey())).toBeNull();
+    expect(storage.getItem("buzzbot.chat.v1.migrated.uid-1")).toBe("1");
+
+    storage.setItem(chatStorageKey(), JSON.stringify(EMPTY_CHAT_STATE));
+    migrateAnonymousChatState(storage, "uid-1");
+    expect(loadChatState(storage, "uid-1")).toEqual(state);
+  });
+
+  it("never overwrites account history or removes anonymous history after a failed copy", () => {
+    const anonymous = storedMigrationState();
+    const account = { ...storedMigrationState(), activeConversationId: null };
+    const existing = keyedMemoryStorage({
+      [chatStorageKey()]: JSON.stringify(anonymous),
+      [chatStorageKey("uid-1")]: JSON.stringify(account),
+    });
+
+    migrateAnonymousChatState(existing, "uid-1");
+    expect(loadChatState(existing, "uid-1")).toEqual(account);
+    expect(loadChatState(existing)).toEqual(anonymous);
+
+    const failing = keyedMemoryStorage({
+      [chatStorageKey()]: JSON.stringify(anonymous),
+    });
+    const originalSet = failing.setItem;
+    failing.setItem = (key, value) => {
+      if (key === chatStorageKey("uid-2")) throw new Error("full");
+      return originalSet(key, value);
+    };
+    expect(() => migrateAnonymousChatState(failing, "uid-2")).toThrow("full");
+    expect(loadChatState(failing)).toEqual(anonymous);
+  });
+
   it("starts empty and round-trips valid versioned state", () => {
     const storage = memoryStorage();
     expect(loadChatState(storage)).toEqual(EMPTY_CHAT_STATE);
@@ -149,3 +207,11 @@ describe("chat storage", () => {
     expect(groups[2].conversations[0]).toMatchObject({ id: "older" });
   });
 });
+
+function storedMigrationState(): StoredChatState {
+  return {
+    version: 1,
+    activeConversationId: "thread-1",
+    conversations: [conversation("thread-1", "2026-08-25T00:00:00.000Z")],
+  };
+}
