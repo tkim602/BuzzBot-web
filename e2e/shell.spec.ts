@@ -47,6 +47,29 @@ test("chat calls the API and resumes from local history after reload", async ({
   await expect(page.getByText("It is a Monday.")).toBeVisible();
 });
 
+test("unexpected API failures show the backend request reference", async ({
+  page,
+}) => {
+  await page.route("http://localhost:8000/chat", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      headers: {
+        "Access-Control-Expose-Headers": "X-Request-ID",
+        "X-Request-ID": "request-503",
+      },
+      body: JSON.stringify({ detail: "Service temporarily unavailable" }),
+    }),
+  );
+  await page.goto("/");
+
+  const composer = page.getByRole("textbox", { name: "Message BuzzBot" });
+  await composer.fill("When do Fall classes begin?");
+  await composer.press("Enter");
+
+  await expect(page.getByText(/Reference: request-503/)).toBeVisible();
+});
+
 test("desktop sidebar collapses and the untouched composer stays compact", async ({
   page,
 }) => {
