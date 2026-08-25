@@ -122,7 +122,7 @@ export function AccountDialog({
             <form className={styles.authForm} onSubmit={submit}>
               <label>
                 Email
-                <input autoComplete="email" onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
+                <input autoComplete="email" autoFocus onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
               </label>
               {mode !== "reset" && (
                 <label>

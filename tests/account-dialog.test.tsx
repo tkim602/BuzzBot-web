@@ -19,6 +19,12 @@ function authState(overrides: Partial<AuthState> = {}): AuthState {
 }
 
 describe("AccountDialog", () => {
+  it("moves initial focus into the authentication dialog", () => {
+    render(<AccountDialog auth={authState()} onClose={() => undefined} open />);
+
+    expect(screen.getByLabelText("Email")).toHaveFocus();
+  });
+
   it("validates matching passwords before creating an account", async () => {
     const auth = authState();
     render(<AccountDialog auth={auth} onClose={() => undefined} open />);
