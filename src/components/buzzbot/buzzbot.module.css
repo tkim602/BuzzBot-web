@@ -221,8 +221,19 @@
 
 .account {
   min-height: 48px;
+  width: 100%;
   gap: 10px;
   padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.account:hover {
+  background: color-mix(in oklch, var(--color-gt-navy) 7%, transparent);
 }
 
 .avatar {
@@ -286,6 +297,129 @@
 
 .backdrop {
   display: none;
+}
+
+.dialogBackdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: color-mix(in oklch, var(--color-gt-navy) 28%, transparent);
+}
+
+.dialog {
+  position: relative;
+  width: min(100%, 430px);
+  display: grid;
+  gap: 18px;
+  padding: 34px;
+  border: 1px solid var(--color-gt-navy);
+  border-radius: 14px;
+  background: var(--color-canvas);
+}
+
+.dialog h2,
+.dialog p {
+  margin: 0;
+}
+
+.dialog h2 {
+  color: var(--color-gt-navy);
+  font-family: var(--font-roboto-condensed), sans-serif;
+  font-size: 28px;
+}
+
+.dialog p {
+  line-height: 1.55;
+}
+
+.dialogEyebrow {
+  color: var(--color-gt-dark-gold);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dialogClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-gt-navy);
+  cursor: pointer;
+}
+
+.authForm,
+.authForm label {
+  display: grid;
+  gap: 8px;
+}
+
+.authForm {
+  gap: 14px;
+}
+
+.authForm label {
+  color: var(--color-gt-navy);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.authForm input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: white;
+  color: var(--color-ink);
+  font: inherit;
+}
+
+.authForm [role="alert"] {
+  color: #8a241d;
+  font-size: 13px;
+}
+
+.primaryButton {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-gt-navy);
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.primaryButton:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.dialogLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.dialogLinks button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-gt-navy);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .workspace {

@@ -4,7 +4,7 @@ import {
   Pin,
   PinOff,
   Search,
-  Settings,
+  Sparkles,
   SquarePen,
   Trash2,
   X,
@@ -14,6 +14,7 @@ import type { ChatHistoryGroup } from "./chat-types";
 import styles from "./buzzbot.module.css";
 
 export type SidebarProps = {
+  accountEmail?: string | null;
   collapsed: boolean;
   mobileOpen: boolean;
   historyGroups: readonly ChatHistoryGroup[];
@@ -21,12 +22,16 @@ export type SidebarProps = {
   onToggle(): void;
   onClose(): void;
   onDeleteConversation(id: string): void;
+  onOpenAccount?(): void;
+  onOpenPersonalization?(): void;
   onNewChat(): void;
   onSelectConversation(id: string): void;
   onTogglePin(id: string): void;
+  personalizationEligible?: boolean;
 };
 
 export function Sidebar({
+  accountEmail = null,
   collapsed,
   mobileOpen,
   historyGroups,
@@ -34,9 +39,12 @@ export function Sidebar({
   onToggle,
   onClose,
   onDeleteConversation,
+  onOpenAccount = () => undefined,
+  onOpenPersonalization = () => undefined,
   onNewChat,
   onSelectConversation,
   onTogglePin,
+  personalizationEligible = false,
 }: SidebarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -187,23 +195,34 @@ export function Sidebar({
         <button
           type="button"
           className={styles.navAction}
-          aria-label="Settings, available after account integration"
-          title="Settings, available after account integration"
-          disabled
+          aria-label="Personalization"
+          onClick={onOpenPersonalization}
         >
-          <Settings aria-hidden="true" size={19} strokeWidth={1.8} />
-          {!collapsed && <span>Settings</span>}
+          <Sparkles aria-hidden="true" size={19} strokeWidth={1.8} />
+          {!collapsed && <span>Personalization</span>}
         </button>
-        <div className={styles.account}>
+        <button
+          aria-label={accountEmail ? `Account for ${accountEmail}` : "Sign in"}
+          className={styles.account}
+          onClick={onOpenAccount}
+          type="button"
+        >
           <span className={styles.avatar} aria-hidden="true">
-            TK
+            {accountEmail?.[0]?.toUpperCase() ?? "B"}
           </span>
           {!collapsed && (
             <span className={styles.accountCopy}>
-              TaeHo Kim<small>Student</small>
+              {accountEmail ?? "Sign in"}
+              <small>
+                {accountEmail
+                  ? personalizationEligible
+                    ? "Georgia Tech account"
+                    : "Account"
+                  : "Save your chats"}
+              </small>
             </span>
           )}
-        </div>
+        </button>
       </div>
     </aside>
   );

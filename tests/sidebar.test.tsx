@@ -105,7 +105,7 @@ describe("Sidebar", () => {
     expect(screen.queryByText("CS 6601 Fall schedule")).not.toBeInTheDocument();
   });
 
-  it("shows an honest empty state and disabled future settings", () => {
+  it("shows an honest empty state with account and personalization actions", () => {
     render(
       <Sidebar
         activeConversationId={null}
@@ -122,11 +122,32 @@ describe("Sidebar", () => {
     );
 
     expect(screen.getByText("Your conversations will appear here.")).toBeVisible();
-    expect(
-      screen.getByRole("button", {
-        name: "Settings, available after account integration",
-      }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Personalization" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+    expect(screen.queryByText("Settings")).not.toBeInTheDocument();
+  });
+
+  it("renders the authenticated account email", () => {
+    render(
+      <Sidebar
+        accountEmail="student@gatech.edu"
+        personalizationEligible
+        activeConversationId={null}
+        collapsed={false}
+        historyGroups={[]}
+        mobileOpen={false}
+        onClose={() => undefined}
+        onDeleteConversation={() => undefined}
+        onNewChat={() => undefined}
+        onSelectConversation={() => undefined}
+        onToggle={() => undefined}
+        onTogglePin={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Account for student@gatech.edu" })).toBeVisible();
+    expect(screen.getByText("student@gatech.edu")).toBeVisible();
+    expect(screen.getByText("Georgia Tech account")).toBeVisible();
   });
 
   it("exposes home, pin, unpin, and delete actions", () => {
