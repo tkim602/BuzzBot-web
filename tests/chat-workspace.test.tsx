@@ -85,6 +85,35 @@ describe("ChatWorkspace", () => {
     expect(screen.getAllByTestId("message-turn")).toHaveLength(2);
   });
 
+  it("shows five citations before expanding the full source list", () => {
+    const citations = Array.from({ length: 6 }, (_, index) => ({
+      url: `https://example.gatech.edu/source-${index + 1}`,
+      title: `Official source ${index + 1}`,
+      fetched_at: "2026-08-25T00:00:00Z",
+      quote: `Evidence ${index + 1}`,
+      page: null,
+    }));
+    render(
+      <ChatWorkspace
+        {...baseProps}
+        messages={[{ ...messages[1], citations }]}
+      />,
+    );
+
+    expect(screen.getByText("Official source 5")).toBeVisible();
+    expect(screen.queryByText("Official source 6")).not.toBeInTheDocument();
+
+    const toggle = screen.getByRole("button", { name: "Show more sources" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+
+    expect(screen.getByText("Official source 6")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Show fewer sources" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
   it("disables composition while pending and exposes a retryable error", () => {
     const onRetry = vi.fn();
     const { rerender } = render(
