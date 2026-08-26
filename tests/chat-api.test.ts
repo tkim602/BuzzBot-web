@@ -52,6 +52,77 @@ describe("sendChat", () => {
     });
   });
 
+  it("omits Authorization for anonymous requests", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(validResponse), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await sendChat({ query: "Hello", thread_id: "thread-1", history: [] });
+
+    expect(fetchMock.mock.calls[0][1].headers).toEqual({
+      "Content-Type": "application/json",
+    });
+  });
+
+  it("retrieves a current Firebase token immediately before the request", async () => {
+    const getIdToken = vi.fn().mockResolvedValue("firebase-token");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(validResponse), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await sendChat(
+      { query: "Hello", thread_id: "thread-1", history: [] },
+      undefined,
+      getIdToken,
+    );
+
+    expect(getIdToken).toHaveBeenCalledWith(false);
+    expect(fetchMock.mock.calls[0][1].headers).toEqual({
+      "Content-Type": "application/json",
+      Authorization: "Bearer firebase-token",
+    });
+  });
+
+  it("force-refreshes once after an authenticated 401", async () => {
+    const getIdToken = vi
+      .fn()
+      .mockResolvedValueOnce("expired-token")
+      .mockResolvedValueOnce("refreshed-token");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(validResponse), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await sendChat(
+      { query: "Hello", thread_id: "thread-1", history: [] },
+      undefined,
+      getIdToken,
+    );
+
+    expect(getIdToken.mock.calls).toEqual([[false], [true]]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({
+      Authorization: "Bearer refreshed-token",
+    });
+  });
+
+  it("fails safely when token retrieval fails", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      sendChat(
+        { query: "Hello", thread_id: "thread-1", history: [] },
+        undefined,
+        vi.fn().mockRejectedValue(new Error("secret provider detail")),
+      ),
+    ).rejects.toThrow("Could not verify your session");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("normalizes a configured API origin", async () => {
     process.env.NEXT_PUBLIC_BUZZBOT_API_URL = "https://api.example.edu/";
     const fetchMock = vi.fn().mockResolvedValue(
@@ -102,5 +173,24 @@ describe("sendChat", () => {
     const promise = sendChat({ query: "Hello", thread_id: "thread-1", history: [] });
     await expect(promise).rejects.toBeInstanceOf(ChatApiError);
     await expect(promise).rejects.toThrow("Please wait before sending another question. Retry in 3s.");
+  });
+
+  it("retains the backend request ID and shows it only for unexpected failures", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(null, {
+          status: 503,
+          headers: { "X-Request-ID": "request-abc" },
+        }),
+      ),
+    );
+
+    const promise = sendChat({ query: "Hello", thread_id: "thread-1", history: [] });
+    await expect(promise).rejects.toMatchObject({
+      requestId: "request-abc",
+      status: 503,
+    });
+    await expect(promise).rejects.toThrow("Reference: request-abc");
   });
 });

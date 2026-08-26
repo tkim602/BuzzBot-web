@@ -2,7 +2,7 @@
 
 ## Direction
 
-BuzzBot is a restrained Georgia Tech-native chat product. The default scene is a student checking a consequential campus question on a laptop between classes, under normal ambient light. The default theme is therefore light and calm; dark mode may be added through Settings when personalization is implemented.
+BuzzBot is a restrained Georgia Tech-native chat product. The default scene is a student checking a consequential campus question on a laptop between classes, under normal ambient light. The default theme is therefore light and calm; dark mode may be added later if the product needs it.
 
 The layout borrows the proven conversation flow of modern chat products without copying their identity: an expandable history sidebar, a quiet main canvas, a compact single-line composer, and likely questions beneath it. Georgia Tech identity comes from navy ink, gold actions, the Diploma surface, typography, and official-source language.
 
@@ -70,7 +70,7 @@ The main empty state has exactly three zones: the question, composer, and likely
 
 ### Sidebar
 
-Expanded mode contains BuzzBot wordmark, collapse action, New chat, Search chats, grouped history, Settings, and account identity. Collapsed mode contains only recognizable actions with tooltips. The toggle exposes `aria-expanded` and the mobile drawer uses a native backdrop button and focus-safe close action.
+Expanded mode contains BuzzBot wordmark, collapse action, New chat, Search chats, grouped history, Personalization, and account identity. Collapsed mode contains only recognizable actions with tooltips. The toggle exposes `aria-expanded` and the mobile drawer uses a native backdrop button and focus-safe close action.
 
 ### Composer
 
@@ -104,4 +104,3 @@ Use a short gold rule followed by “Thinking”. No spinner, waveform, fake pro
 - Never pair a 1px border with a wide soft shadow. The composer may use one crisp 3px offset shadow.
 - Cards and surfaces top out at 16px radius; full-pill treatment is reserved for compact buttons or tags.
 - Do not use gradient text, glassmorphism, decorative stripes, or repeated section eyebrows.
-
