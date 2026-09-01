@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import type { StoredMessage } from "./chat-types";
 import styles from "./buzzbot.module.css";
+
+const CITATION_PREVIEW_LIMIT = 5;
 
 function safeHttpUrl(value: string): string | null {
   try {
@@ -22,7 +27,11 @@ function shortDate(value: string): string {
 }
 
 export function ResponseEvidence({ message }: { message: StoredMessage }) {
+  const [citationsExpanded, setCitationsExpanded] = useState(false);
   const citations = message.citations ?? [];
+  const visibleCitations = citationsExpanded
+    ? citations
+    : citations.slice(0, CITATION_PREVIEW_LIMIT);
   const notes = message.notes ?? [];
 
   return (
@@ -31,7 +40,7 @@ export function ResponseEvidence({ message }: { message: StoredMessage }) {
         <section aria-label="Official sources" className={styles.sources}>
           <h3>Official sources</h3>
           <ol>
-            {citations.map((citation, index) => {
+            {visibleCitations.map((citation, index) => {
               const href = safeHttpUrl(citation.url);
               const title = citation.title || `Official source ${index + 1}`;
               return (
@@ -57,6 +66,16 @@ export function ResponseEvidence({ message }: { message: StoredMessage }) {
               );
             })}
           </ol>
+          {citations.length > CITATION_PREVIEW_LIMIT && (
+            <button
+              aria-expanded={citationsExpanded}
+              className={styles.sourceToggle}
+              type="button"
+              onClick={() => setCitationsExpanded((expanded) => !expanded)}
+            >
+              {citationsExpanded ? "Show fewer sources" : "Show more sources"}
+            </button>
+          )}
         </section>
       )}
       <div className={styles.responseMeta}>

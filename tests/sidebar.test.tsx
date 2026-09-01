@@ -12,11 +12,13 @@ const historyGroups: ChatHistoryGroup[] = [
         id: "thread-cs",
         title: "CS 6601 Fall schedule",
         searchableText: "CS 6601 Fall schedule artificial intelligence",
+        pinned: false,
       },
       {
         id: "thread-registration",
         title: "Registration dates",
         searchableText: "Registration dates withdrawal deadline",
+        pinned: false,
       },
     ],
   },
@@ -27,6 +29,7 @@ const historyGroups: ChatHistoryGroup[] = [
         id: "thread-omscs",
         title: "OMSCS graduation requirements",
         searchableText: "OMSCS graduation requirements 10 courses",
+        pinned: true,
       },
     ],
   },
@@ -42,6 +45,8 @@ function SidebarHarness() {
       mobileOpen={false}
       onClose={() => undefined}
       onNewChat={() => undefined}
+      onDeleteConversation={() => undefined}
+      onTogglePin={() => undefined}
       onSelectConversation={() => undefined}
       onToggle={() => setCollapsed((value) => !value)}
     />
@@ -74,6 +79,8 @@ describe("Sidebar", () => {
         mobileOpen={false}
         onClose={() => undefined}
         onNewChat={() => undefined}
+        onDeleteConversation={() => undefined}
+        onTogglePin={() => undefined}
         onSelectConversation={onSelectConversation}
         onToggle={() => undefined}
       />,
@@ -98,7 +105,7 @@ describe("Sidebar", () => {
     expect(screen.queryByText("CS 6601 Fall schedule")).not.toBeInTheDocument();
   });
 
-  it("shows an honest empty state and disabled future settings", () => {
+  it("shows an honest empty state with account and personalization actions", () => {
     render(
       <Sidebar
         activeConversationId={null}
@@ -107,16 +114,70 @@ describe("Sidebar", () => {
         mobileOpen={false}
         onClose={() => undefined}
         onNewChat={() => undefined}
+        onDeleteConversation={() => undefined}
+        onTogglePin={() => undefined}
         onSelectConversation={() => undefined}
         onToggle={() => undefined}
       />,
     );
 
     expect(screen.getByText("Your conversations will appear here.")).toBeVisible();
-    expect(
-      screen.getByRole("button", {
-        name: "Settings, available after account integration",
-      }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Personalization" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+    expect(screen.queryByText("Settings")).not.toBeInTheDocument();
+  });
+
+  it("renders the authenticated account email", () => {
+    render(
+      <Sidebar
+        accountEmail="student@gatech.edu"
+        personalizationEligible
+        activeConversationId={null}
+        collapsed={false}
+        historyGroups={[]}
+        mobileOpen={false}
+        onClose={() => undefined}
+        onDeleteConversation={() => undefined}
+        onNewChat={() => undefined}
+        onSelectConversation={() => undefined}
+        onToggle={() => undefined}
+        onTogglePin={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Account for student@gatech.edu" })).toBeVisible();
+    expect(screen.getByText("student@gatech.edu")).toBeVisible();
+    expect(screen.getByText("Georgia Tech account")).toBeVisible();
+  });
+
+  it("exposes home, pin, unpin, and delete actions", () => {
+    const onNewChat = vi.fn();
+    const onTogglePin = vi.fn();
+    const onDeleteConversation = vi.fn();
+    render(
+      <Sidebar
+        activeConversationId="thread-cs"
+        collapsed={false}
+        historyGroups={historyGroups}
+        mobileOpen={false}
+        onClose={() => undefined}
+        onDeleteConversation={onDeleteConversation}
+        onNewChat={onNewChat}
+        onSelectConversation={() => undefined}
+        onToggle={() => undefined}
+        onTogglePin={onTogglePin}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "BuzzBot home" }));
+    expect(onNewChat).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Pin CS 6601 Fall schedule" }));
+    expect(onTogglePin).toHaveBeenCalledWith("thread-cs");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Unpin OMSCS graduation requirements" }),
+    );
+    expect(onTogglePin).toHaveBeenCalledWith("thread-omscs");
+    fireEvent.click(screen.getByRole("button", { name: "Delete Registration dates" }));
+    expect(onDeleteConversation).toHaveBeenCalledWith("thread-registration");
   });
 });

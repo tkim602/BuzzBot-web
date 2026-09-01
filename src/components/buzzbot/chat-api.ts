@@ -8,11 +8,17 @@ import type {
 const DEFAULT_API_ORIGIN = "http://localhost:8000";
 
 export class ChatApiError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    public readonly status?: number,
+    public readonly requestId?: string,
+  ) {
     super(message);
     this.name = "ChatApiError";
   }
 }
+
+export type GetIdToken = (forceRefresh: boolean) => Promise<string | null>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -78,12 +84,55 @@ function errorMessage(status: number, body: unknown): string {
 export async function sendChat(
   request: ChatApiRequest,
   signal?: AbortSignal,
+  getIdToken?: GetIdToken,
 ): Promise<ChatApiResponse> {
-  let response: Response;
+  let token: string | null = null;
+  if (getIdToken) {
+    try {
+      token = await getIdToken(false);
+    } catch {
+      throw new ChatApiError("Could not verify your session. Please sign in again.", 401);
+    }
+  }
+
+  let response = await requestChat(request, signal, token);
+  if (response.status === 401 && token && getIdToken) {
+    try {
+      token = await getIdToken(true);
+    } catch {
+      throw new ChatApiError("Your session expired. Please sign in again.", 401);
+    }
+    response = await requestChat(request, signal, token);
+  }
+
+  const requestId = response.headers.get("X-Request-ID") ?? undefined;
+  const body: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message =
+      response.status === 401
+        ? "Your session expired. Please sign in again."
+        : errorMessage(response.status, body);
+    const reference = response.status >= 500 && requestId ? ` Reference: ${requestId}.` : "";
+    throw new ChatApiError(`${message}${reference}`, response.status, requestId);
+  }
+  if (!isChatApiResponse(body)) {
+    throw new ChatApiError("BuzzBot returned an invalid response.", response.status, requestId);
+  }
+  return body;
+}
+
+async function requestChat(
+  request: ChatApiRequest,
+  signal: AbortSignal | undefined,
+  token: string | null,
+): Promise<Response> {
   try {
-    response = await fetch(`${apiOrigin()}/chat`, {
+    return await fetch(`${apiOrigin()}/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(request),
       signal,
     });
@@ -91,11 +140,4 @@ export async function sendChat(
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     throw new ChatApiError("Unable to reach BuzzBot. Check that the API is running.");
   }
-
-  const body: unknown = await response.json().catch(() => null);
-  if (!response.ok) throw new ChatApiError(errorMessage(response.status, body));
-  if (!isChatApiResponse(body)) {
-    throw new ChatApiError("BuzzBot returned an invalid response.");
-  }
-  return body;
 }

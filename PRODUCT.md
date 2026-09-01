@@ -31,9 +31,8 @@ Warm, composed, and trustworthy. BuzzBot should feel human-centered and quietly 
 2. Keep evidence visible. Citations, source authority, and data freshness are part of the answer rather than optional metadata.
 3. Put one idea on each surface. The empty state contains a prompt, a compact composer, and likely questions, not a dashboard.
 4. Use Georgia Tech identity with restraint. Navy, gold, typography, and warm institutional surfaces carry the identity without decoration.
-5. Keep personalization out of the conversation canvas. Preferences belong in Settings when that product scope is implemented.
+5. Keep personalization out of the conversation canvas. Course context belongs in Personalization when that product scope is implemented.
 
 ## Accessibility & Inclusion
 
 Target WCAG 2.2 AA. All actions must be keyboard reachable, focus must remain visible, body text contrast must be at least 4.5:1, large text contrast at least 3:1, and practical touch targets at least 44px. Motion must respect `prefers-reduced-motion`. English is the initial interface language, but Korean and Japanese content must preserve phrase boundaries using `word-break: keep-all` and must never be made to fit through arbitrary character breaks.
-

@@ -1,9 +1,12 @@
 import {
   PanelLeftClose,
   PanelLeftOpen,
+  Pin,
+  PinOff,
   Search,
-  Settings,
+  Sparkles,
   SquarePen,
+  Trash2,
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -11,25 +14,37 @@ import type { ChatHistoryGroup } from "./chat-types";
 import styles from "./buzzbot.module.css";
 
 export type SidebarProps = {
+  accountEmail?: string | null;
   collapsed: boolean;
   mobileOpen: boolean;
   historyGroups: readonly ChatHistoryGroup[];
   activeConversationId: string | null;
   onToggle(): void;
   onClose(): void;
+  onDeleteConversation(id: string): void;
+  onOpenAccount?(): void;
+  onOpenPersonalization?(): void;
   onNewChat(): void;
   onSelectConversation(id: string): void;
+  onTogglePin(id: string): void;
+  personalizationEligible?: boolean;
 };
 
 export function Sidebar({
+  accountEmail = null,
   collapsed,
   mobileOpen,
   historyGroups,
   activeConversationId,
   onToggle,
   onClose,
+  onDeleteConversation,
+  onOpenAccount = () => undefined,
+  onOpenPersonalization = () => undefined,
   onNewChat,
   onSelectConversation,
+  onTogglePin,
+  personalizationEligible = false,
 }: SidebarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,12 +77,17 @@ export function Sidebar({
       data-mobile-open={mobileOpen}
     >
       <div className={styles.sidebarHeader}>
-        <div className={styles.wordmark} aria-label="BuzzBot">
+        <button
+          aria-label="BuzzBot home"
+          className={styles.wordmark}
+          onClick={onNewChat}
+          type="button"
+        >
           <span className={styles.wordmarkGlyph} aria-hidden="true">
             B
           </span>
           {!collapsed && <span>BuzzBot</span>}
-        </div>
+        </button>
         <button
           type="button"
           className={styles.iconButton}
@@ -129,7 +149,7 @@ export function Sidebar({
               <h2>{group.label}</h2>
               <ul>
                 {group.conversations.map((conversation) => (
-                  <li key={conversation.id}>
+                  <li className={styles.historyRow} key={conversation.id}>
                     <button
                       aria-current={
                         activeConversationId === conversation.id ? "page" : undefined
@@ -143,6 +163,26 @@ export function Sidebar({
                     >
                       {conversation.title}
                     </button>
+                    <button
+                      aria-label={`${conversation.pinned ? "Unpin" : "Pin"} ${conversation.title}`}
+                      className={styles.historyRowAction}
+                      onClick={() => onTogglePin(conversation.id)}
+                      type="button"
+                    >
+                      {conversation.pinned ? (
+                        <PinOff aria-hidden="true" size={15} />
+                      ) : (
+                        <Pin aria-hidden="true" size={15} />
+                      )}
+                    </button>
+                    <button
+                      aria-label={`Delete ${conversation.title}`}
+                      className={styles.historyRowAction}
+                      onClick={() => onDeleteConversation(conversation.id)}
+                      type="button"
+                    >
+                      <Trash2 aria-hidden="true" size={15} />
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -155,23 +195,34 @@ export function Sidebar({
         <button
           type="button"
           className={styles.navAction}
-          aria-label="Settings, available after account integration"
-          title="Settings, available after account integration"
-          disabled
+          aria-label="Personalization"
+          onClick={onOpenPersonalization}
         >
-          <Settings aria-hidden="true" size={19} strokeWidth={1.8} />
-          {!collapsed && <span>Settings</span>}
+          <Sparkles aria-hidden="true" size={19} strokeWidth={1.8} />
+          {!collapsed && <span>Personalization</span>}
         </button>
-        <div className={styles.account}>
+        <button
+          aria-label={accountEmail ? `Account for ${accountEmail}` : "Sign in"}
+          className={styles.account}
+          onClick={onOpenAccount}
+          type="button"
+        >
           <span className={styles.avatar} aria-hidden="true">
-            TK
+            {accountEmail?.[0]?.toUpperCase() ?? "B"}
           </span>
           {!collapsed && (
             <span className={styles.accountCopy}>
-              TaeHo Kim<small>Student</small>
+              {accountEmail ?? "Sign in"}
+              <small>
+                {accountEmail
+                  ? personalizationEligible
+                    ? "Georgia Tech account"
+                    : "Account"
+                  : "Save your chats"}
+              </small>
             </span>
           )}
-        </div>
+        </button>
       </div>
     </aside>
   );

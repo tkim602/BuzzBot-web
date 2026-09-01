@@ -14,8 +14,16 @@ export const EMPTY_CHAT_STATE: StoredChatState = {
 };
 
 const MAX_CONVERSATIONS = 50;
-const MAX_MESSAGES = 40;
+const MAX_MESSAGES = 100;
 const MAX_API_HISTORY = 20;
+
+export function chatStorageKey(userId?: string | null): string {
+  return userId ? `${CHAT_STORAGE_KEY}.user.${userId}` : CHAT_STORAGE_KEY;
+}
+
+function migrationMarkerKey(userId: string): string {
+  return `${CHAT_STORAGE_KEY}.migrated.${userId}`;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -43,6 +51,7 @@ function isConversation(value: unknown): value is StoredConversation {
     typeof value.title === "string" &&
     typeof value.createdAt === "string" &&
     typeof value.updatedAt === "string" &&
+    (value.pinnedAt === undefined || typeof value.pinnedAt === "string") &&
     Array.isArray(value.messages) &&
     value.messages.every(isMessage)
   );
@@ -74,9 +83,12 @@ export function normalizeChatState(state: StoredChatState): StoredChatState {
   return { version: 1, activeConversationId, conversations };
 }
 
-export function loadChatState(storage: Pick<Storage, "getItem">): StoredChatState {
+export function loadChatState(
+  storage: Pick<Storage, "getItem">,
+  userId?: string | null,
+): StoredChatState {
   try {
-    const raw = storage.getItem(CHAT_STORAGE_KEY);
+    const raw = storage.getItem(chatStorageKey(userId));
     if (!raw) return EMPTY_CHAT_STATE;
     const parsed: unknown = JSON.parse(raw);
     return isChatState(parsed) ? normalizeChatState(parsed) : EMPTY_CHAT_STATE;
@@ -88,8 +100,27 @@ export function loadChatState(storage: Pick<Storage, "getItem">): StoredChatStat
 export function saveChatState(
   storage: Pick<Storage, "setItem">,
   state: StoredChatState,
+  userId?: string | null,
 ): void {
-  storage.setItem(CHAT_STORAGE_KEY, JSON.stringify(normalizeChatState(state)));
+  storage.setItem(chatStorageKey(userId), JSON.stringify(normalizeChatState(state)));
+}
+
+export function migrateAnonymousChatState(
+  storage: Pick<Storage, "getItem" | "setItem" | "removeItem">,
+  userId: string,
+): void {
+  const marker = migrationMarkerKey(userId);
+  if (storage.getItem(marker)) return;
+  if (storage.getItem(chatStorageKey(userId))) {
+    storage.setItem(marker, "1");
+    return;
+  }
+  const anonymous = storage.getItem(CHAT_STORAGE_KEY);
+  if (anonymous) {
+    saveChatState(storage, loadChatState(storage), userId);
+    storage.removeItem(CHAT_STORAGE_KEY);
+  }
+  storage.setItem(marker, "1");
 }
 
 export function toApiHistory(messages: readonly StoredMessage[]): ChatTurn[] {
@@ -108,6 +139,7 @@ export function groupConversations(
   now = new Date(),
 ): ChatHistoryGroup[] {
   const groups = new Map<ChatHistoryGroup["label"], ChatHistoryGroup["conversations"]>([
+    ["Pinned", []],
     ["Today", []],
     ["Previous 7 days", []],
     ["Older", []],
@@ -115,22 +147,34 @@ export function groupConversations(
   const today = startOfDay(now);
 
   [...conversations]
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    .sort((left, right) => {
+      if (left.pinnedAt && right.pinnedAt) return right.pinnedAt.localeCompare(left.pinnedAt);
+      if (left.pinnedAt) return -1;
+      if (right.pinnedAt) return 1;
+      return right.updatedAt.localeCompare(left.updatedAt);
+    })
     .forEach((conversation) => {
       const ageInDays = Math.floor(
         (today - startOfDay(new Date(conversation.updatedAt))) / 86_400_000,
       );
-      const label = ageInDays <= 0 ? "Today" : ageInDays <= 7 ? "Previous 7 days" : "Older";
+      const label = conversation.pinnedAt
+        ? "Pinned"
+        : ageInDays <= 0
+          ? "Today"
+          : ageInDays <= 7
+            ? "Previous 7 days"
+            : "Older";
       groups.get(label)?.push({
         id: conversation.id,
         title: conversation.title,
+        pinned: Boolean(conversation.pinnedAt),
         searchableText: `${conversation.title} ${conversation.messages
           .map((message) => message.content)
           .join(" ")}`,
       });
     });
 
-  return (["Today", "Previous 7 days", "Older"] as const)
+  return (["Pinned", "Today", "Previous 7 days", "Older"] as const)
     .map((label) => ({ label, conversations: groups.get(label) ?? [] }))
     .filter((group) => group.conversations.length > 0);
 }
